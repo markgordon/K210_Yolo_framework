@@ -1,4 +1,4 @@
-import tensorflow.python as tf
+from tensorflow import python as tf
 from tensorflow.contrib.data import assert_element_shape
 from tensorflow.python import keras
 from tensorflow.python.keras.callbacks import TensorBoard, LearningRateScheduler

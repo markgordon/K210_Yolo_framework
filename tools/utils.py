@@ -1,4 +1,4 @@
-import tensorflow as tf
+from tensorflow import python as tf
 from tensorflow.python.keras import backend as K
 from tensorflow import map_fn
 import numpy as np
