@@ -11,6 +11,7 @@ import imgaug as ia
 from tensorflow import py_function
 import pickle
 from termcolor import colored
+from skimage import io
 
 INFO = colored('[ INFO  ]', 'blue')
 ERROR = colored('[ ERROR ]', 'red')
@@ -71,7 +72,7 @@ class Helper(object):
         if class_num:
             self.class_num = class_num  # type:int
         if anchors:
-            self.anchors = np.load(anchors)  # type:np.ndarray
+            self.anchors = np.load(anchors,allow_pickle=True)  # type:np.ndarray
             self.anchor_number = len(self.anchors[0])
             self.output_number = len(self.anchors)
             self.xy_offset = Helper._coordinate_offset(self.anchors, self.out_hw)  # type:np.ndarray
@@ -349,7 +350,7 @@ class Helper(object):
         np.ndarray
             image src
         """
-        img = skimage.io.imread(img_path)
+        img = io.imread(img_path)
         if len(img.shape) != 3:
             img = skimage.color.gray2rgb(img)
         return img[..., :3]
