@@ -109,11 +109,16 @@ def main(args, train_set, class_num, pre_ckpt, model_def,
         pass
 
     if is_prune == 'True':
-        final_model = sparsity.strip_pruning(train_model)
-        prune_ckpt = log_dir / 'yolo_prune_model.h5'
-        keras.models.save_model(yolo_model, str(prune_ckpt), include_optimizer=False)
-        print()
-        print(INFO, f' Save Pruned Model as {str(prune_ckpt)}')
+        final_model = sparsity.keras.prune.strip_pruning(model)
+        final_model.summary()
+        print('Saving pruned model to: ', new_pruned_keras_file)
+        final_model.save('{}'.format(output_path), save_format='tf')
+        tflite_model_file = model_path + "sparse.tf"
+        converter = tf.lite.TFLiteConverter.from_keras_model(final_model)
+        converter.optimizations = [tf.lite.Optimize.OPTIMIZE_FOR_SIZE]
+        tflite_model = converter.convert()
+        with open(tflite_model_file, 'wb') as f:
+            f.write(tflite_model)
     else:
         keras.models.save_model(yolo_model, str(ckpt))
         print()
@@ -132,7 +137,7 @@ if __name__ == "__main__":
     parser.add_argument('--output_size', type=int, help='net work output image size', default=(18,24,18,24), nargs='+')
     parser.add_argument('--batch_size', type=int, help='batch size', default=4)
     parser.add_argument('--rand_seed', type=int, help='random seed', default=6)
-    parser.add_argument('--max_nrof_epochs', type=int, help='epoch num', default=10)
+    parser.add_argument('--max_nrof_epochs', type=int, help='epoch num', default=1)
     parser.add_argument('--init_learning_rate', type=float, help='init learning rate', default=0.001)
     parser.add_argument('--learning_rate_decay_factor', type=float, help='learning rate decay factor', default=0)
     parser.add_argument('--obj_weight', type=float, help='obj loss weight', default=5.0)
