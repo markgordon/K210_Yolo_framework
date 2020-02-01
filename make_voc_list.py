@@ -4,7 +4,7 @@ import numpy as np
 import sys
 import argparse
 import skimage
-
+import skimage.io as io
 
 def main(train_file: str, output_file: str):
     image_path_list = np.loadtxt(train_file, dtype=str)
@@ -20,7 +20,7 @@ def main(train_file: str, output_file: str):
         np.array([
             image_path_list[i],
             np.loadtxt(ann_list[i], dtype=float, ndmin=2),
-            np.array(skimage.io.imread(image_path_list[i]).shape[0:2])]
+            np.array(io.imread(image_path_list[i]).shape[0:2])]
         ) for i in range(len(ann_list))])
 
     np.save(output_file, lines)

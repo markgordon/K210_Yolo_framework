@@ -223,12 +223,12 @@ def main(train_set: str, max_iters: int, in_hw: tuple, out_hw: tuple,
 def parse_arguments(argv):
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('train_set', type=str, help=NOTE + 'this is train dataset name , the output *.npy file will be {train_set}_anchors.list')
+    parser.add_argument('train_set', type=str, help=NOTE + 'this is train dataset name , the output *.npy file will be {train_set}_anchors.list', default='voc')
     parser.add_argument('--max_iters', type=int, help='kmeans max iters', default=10)
     parser.add_argument('--is_random', type=str, help='wether random generate the center', choices=['True', 'False'], default='True')
     parser.add_argument('--is_plot', type=str, help='wether show the figure', choices=['True', 'False'], default='True')
-    parser.add_argument('--in_hw', type=int, help='net work input image size', default=(224, 320), nargs='+')
-    parser.add_argument('--out_hw', type=int, help='net work output image size', default=(7, 10, 14, 20), nargs='+')
+    parser.add_argument('--in_hw', type=int, help='net work input image size', default=(288,384), nargs='+')
+    parser.add_argument('--out_hw', type=int, help='net work output image size', default=(18,24,18,24), nargs='+')
     parser.add_argument('--low', type=float, help='Lower bound of random anchor, (x,y)', default=(0.0, 0.0), nargs='+')
     parser.add_argument('--high', type=float, help='Upper bound of random anchor, (x,y)', default=(1.0, 1.0), nargs='+')
     parser.add_argument('--anchor_num', type=int, help='single layer anchor nums', default=3)

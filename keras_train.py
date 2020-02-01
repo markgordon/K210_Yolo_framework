@@ -13,7 +13,7 @@ import sys
 import argparse
 from termcolor import colored
 from tensorflow_model_optimization.python.core.api.sparsity import keras as sparsity
-
+import convert
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 sess = tf.Session(config=config)
@@ -41,17 +41,27 @@ def main(args, train_set, class_num, pre_ckpt, model_def,
     write_arguments_to_file(args, str(log_dir / 'args.txt'))
 
     # Build utils
+
     h = Helper(f'data/{train_set}_img_ann.npy', class_num, f'data/{train_set}_anchor.npy',
                np.reshape(np.array(image_size), (-1, 2)), np.reshape(np.array(output_size), (-1, 2)), vaildation_split)
     h.set_dataset(batch_size, rand_seed, is_training=(is_augmenter == 'True'))
 
     # Build network
-    network = eval(model_def)  # type :yolo_mobilev2
-    yolo_model, yolo_model_warpper = network([image_size[0], image_size[1], 3], len(h.anchors[0]), class_num, alpha=depth_multiplier)
+    if False:
+        network = eval(model_def)  # type :yolo_mobilev2
+        yolo_model, yolo_model_wrapper = network([image_size[0], image_size[1], 3], len(h.anchors[0]), class_num, alpha=depth_multiplier)
+    else:
+        yolo_model, yolo_model_wrapper,output_size = \
+            convert.make_model(model_def, model_def + '.weights',
+                               f'data/{train_set}_anchor.npy',
+                               h.train_epoch_step * end_epoch,
+                               initial_sparsity,
+                               final_sparsity,
+                               frequency)
 
     if pre_ckpt != None and pre_ckpt != 'None' and pre_ckpt != '':
         if 'h5' in pre_ckpt:
-            yolo_model_warpper.load_weights(str(pre_ckpt))
+            yolo_model_wrapper.load_weights(str(pre_ckpt))
             print(INFO, f' Load CKPT {str(pre_ckpt)}')
         else:
             print(ERROR, ' Pre CKPT path is unvalid')
@@ -65,10 +75,8 @@ def main(args, train_set, class_num, pre_ckpt, model_def,
                                                      frequency=frequency)
     }
 
-    if is_prune == 'True':
-        train_model = sparsity.prune_low_magnitude(yolo_model_warpper, **pruning_params)
-    else:
-        train_model = yolo_model_warpper
+
+    train_model = yolo_model_wrapper
 
     train_model.compile(
         keras.optimizers.Adam(
@@ -76,7 +84,8 @@ def main(args, train_set, class_num, pre_ckpt, model_def,
             decay=learning_rate_decay_factor),
         loss=[create_loss_fn(h, obj_thresh, iou_thresh, obj_weight, noobj_weight, wh_weight, layer)
               for layer in range(len(train_model.output) if isinstance(train_model.output, list) else 1)],
-        metrics=[Yolo_Precision(obj_thresh, name='p'), Yolo_Recall(obj_thresh, name='r')])
+        metrics=[Yolo_Precision(obj_thresh, name='p'), Yolo_Recall(obj_thresh, name='r')]
+    )
 
     """ NOTE fix the dataset output shape """
     shapes = (train_model.input.shape, tuple(h.output_shapes))
@@ -114,14 +123,14 @@ def main(args, train_set, class_num, pre_ckpt, model_def,
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--train_set', type=str, help='trian file lists', default='voc')
-    parser.add_argument('--class_num', type=int, help='trian class num', default=20)
+    parser.add_argument('--class_num', type=int, help='trian class num', default=1)
     parser.add_argument('--pre_ckpt', type=str, help='pre-train model weights', default='None')
-    parser.add_argument('--model_def', type=str, help='Model definition.', default='yolo_mobilev2')
+    parser.add_argument('--model_def', type=str, help='Model definition.', default='tiny_yolo')
     parser.add_argument('--depth_multiplier', type=float, help='mobilenet depth_multiplier', choices=[0.5, 0.75, 1.0], default=1.0)
     parser.add_argument('--augmenter', type=str, help='use image augmenter', choices=['True', 'False'], default='True')
-    parser.add_argument('--image_size', type=int, help='net work input image size', default=(224, 320), nargs='+')
-    parser.add_argument('--output_size', type=int, help='net work output image size', default=(7, 10, 14, 20), nargs='+')
-    parser.add_argument('--batch_size', type=int, help='batch size', default=16)
+    parser.add_argument('--image_size', type=int, help='net work input image size', default=(288,384), nargs='+')
+    parser.add_argument('--output_size', type=int, help='net work output image size', default=(18,24,18,24), nargs='+')
+    parser.add_argument('--batch_size', type=int, help='batch size', default=4)
     parser.add_argument('--rand_seed', type=int, help='random seed', default=6)
     parser.add_argument('--max_nrof_epochs', type=int, help='epoch num', default=10)
     parser.add_argument('--init_learning_rate', type=float, help='init learning rate', default=0.001)
