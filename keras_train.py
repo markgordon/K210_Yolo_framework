@@ -1,6 +1,5 @@
 from tensorflow import python as tf
 from tensorflow.contrib.data import assert_element_shape
-from tensorflow.python import keras
 from tensorflow.python.keras.callbacks import TensorBoard, LearningRateScheduler
 from tools.utils import Helper, create_loss_fn, INFO, ERROR, NOTE
 from tools.custom import Yolo_Precision, Yolo_Recall
@@ -13,6 +12,7 @@ import sys
 import argparse
 from termcolor import colored
 from tensorflow_model_optimization.python.core.api.sparsity import keras as sparsity
+import tensorflow_model_optimization as tmot
 import convert
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
@@ -109,7 +109,7 @@ def main(args, train_set, class_num, pre_ckpt, model_def,
         pass
 
     if is_prune == 'True':
-        final_model = sparsity.keras.prune.strip_pruning(model)
+        final_model = tmot.sparsity.keras.strip_pruning(train_model)
         final_model.summary()
         print('Saving pruned model to: ', new_pruned_keras_file)
         final_model.save('{}'.format(output_path), save_format='tf')
@@ -124,6 +124,10 @@ def main(args, train_set, class_num, pre_ckpt, model_def,
         print()
         print(INFO, f' Save Model as {str(ckpt)}')
 
+
+    import tensorflow as tf
+
+    print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
