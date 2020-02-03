@@ -29,7 +29,7 @@
 #define PLL0_OUTPUT_FREQ 800000000UL
 #define PLL1_OUTPUT_FREQ 400000000UL
 
-#define CLASS_NUMBER 20
+#define CLASS_NUMBER 1
 
 volatile uint32_t g_ai_done_flag;
 volatile uint8_t g_dvp_finish_flag;
@@ -44,20 +44,22 @@ static obj_info_t face_detect_info;
 // NOTE x,y
 
 static float layer0_anchor[ANCHOR_NUM * 2]= {
-    0.76120044, 0.57155991, 0.6923348, 0.88535553, 0.47163042, 0.34163313,
+    0.6610716,  0.82218409, 0.46643503, 0.54653784, 0.3211604, 0.73120042,
 };
 
 static float layer1_anchor[ANCHOR_NUM * 2]= {
-    0.33340788, 0.70065861, 0.18124964, 0.38986752, 0.08497349, 0.1527057,
+    0.28271829, 0.3825383 ,
+  ,0.16007401,0.31330459,
+  ,0.08661034, 0.14243329,
 };
 
-#define LOAD_KMODEL_FROM_FLASH 1
+//#define LOAD_KMODEL_FROM_FLASH 
 
 #if LOAD_KMODEL_FROM_FLASH
 #define KMODEL_SIZE (3836 * 1024)
-uint8_t model_data[KMODEL_SIZE];
+	uint8_t model_data[KMODEL_SIZE];
 #else
-// INCBIN(model, "detect.kmodel");
+   INCBIN(model, "detect.kmodel");
 #endif
 
 static void ai_done(void *ctx) { g_ai_done_flag= 1; }

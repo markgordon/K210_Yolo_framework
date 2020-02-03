@@ -1,4 +1,4 @@
-from tensorflow import python as tf
+import tensorflow.lite as lite
 from tensorflow.contrib.data import assert_element_shape
 from tensorflow.python.keras.callbacks import TensorBoard, LearningRateScheduler
 from tools.utils import Helper, create_loss_fn, INFO, ERROR, NOTE
@@ -14,6 +14,8 @@ from termcolor import colored
 from tensorflow_model_optimization.python.core.api.sparsity import keras as sparsity
 import tensorflow_model_optimization as tmot
 import convert
+import tensorflow as tf
+
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 sess = tf.Session(config=config)
@@ -58,7 +60,7 @@ def main(args, train_set, class_num, pre_ckpt, model_def,
                                initial_sparsity,
                                final_sparsity,
                                frequency)
-
+        tf.keras.models.save_model(yolo_model, 'pre_prun{model_def}', include_optimizer=False)
     if pre_ckpt != None and pre_ckpt != 'None' and pre_ckpt != '':
         if 'h5' in pre_ckpt:
             yolo_model_wrapper.load_weights(str(pre_ckpt))
@@ -68,8 +70,8 @@ def main(args, train_set, class_num, pre_ckpt, model_def,
 
     # prune model
     pruning_params = {
-        'pruning_schedule': sparsity.PolynomialDecay(initial_sparsity=initial_sparsity,
-                                                     final_sparsity=final_sparsity,
+        'pruning_schedule': sparsity.PolynomialDecay(initial_sparsity=.50,
+                                                     final_sparsity=.90,
                                                      begin_step=0,
                                                      end_step=h.train_epoch_step * end_epoch,
                                                      frequency=frequency)
@@ -107,29 +109,24 @@ def main(args, train_set, class_num, pre_ckpt, model_def,
                         validation_data=h.test_dataset, validation_steps=int(h.test_epoch_step * h.validation_split))
     except KeyboardInterrupt as e:
         pass
-
+        train_model.summary()
     if is_prune == 'True':
         final_model = tmot.sparsity.keras.strip_pruning(train_model)
         final_model.summary()
-        print('Saving pruned model to: ', new_pruned_keras_file)
-        final_model.save('{}'.format(output_path), save_format='tf')
-        tflite_model_file = model_path + "sparse.tf"
-        converter = tf.lite.TFLiteConverter.from_keras_model(final_model)
-        converter.optimizations = [tf.lite.Optimize.OPTIMIZE_FOR_SIZE]
-        tflite_model = converter.convert()
-        with open(tflite_model_file, 'wb') as f:
-            f.write(tflite_model)
+        model_name = 'sparse1.h5'
+        yolo_model = tmot.sparsity.keras.strip_pruning(yolo_model)
+        tf.keras.models.save_model(yolo_model, model_name, include_optimizer = False)
+        tf.keras.models.save_model(yolo_model, '{model_def}.tf', include_optimizer=False)
     else:
         keras.models.save_model(yolo_model, str(ckpt))
         print()
         print(INFO, f' Save Model as {str(ckpt)}')
 
 
-    import tensorflow as tf
-
-    print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
 
 if __name__ == "__main__":
+    print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--train_set', type=str, help='trian file lists', default='voc')
     parser.add_argument('--class_num', type=int, help='trian class num', default=1)
@@ -137,16 +134,16 @@ if __name__ == "__main__":
     parser.add_argument('--model_def', type=str, help='Model definition.', default='tiny_yolo')
     parser.add_argument('--depth_multiplier', type=float, help='mobilenet depth_multiplier', choices=[0.5, 0.75, 1.0], default=1.0)
     parser.add_argument('--augmenter', type=str, help='use image augmenter', choices=['True', 'False'], default='True')
-    parser.add_argument('--image_size', type=int, help='net work input image size', default=(288,384), nargs='+')
-    parser.add_argument('--output_size', type=int, help='net work output image size', default=(18,24,18,24), nargs='+')
-    parser.add_argument('--batch_size', type=int, help='batch size', default=4)
+    parser.add_argument('--image_size', type=int, help='net work input image size', default=(192,256), nargs='+')
+    parser.add_argument('--output_size', type=int, help='net work output image size', default=(6,8,12,16), nargs='+')
+    parser.add_argument('--batch_size', type=int, help='batch size', default=16)
     parser.add_argument('--rand_seed', type=int, help='random seed', default=6)
-    parser.add_argument('--max_nrof_epochs', type=int, help='epoch num', default=1)
-    parser.add_argument('--init_learning_rate', type=float, help='init learning rate', default=0.001)
-    parser.add_argument('--learning_rate_decay_factor', type=float, help='learning rate decay factor', default=0)
+    parser.add_argument('--max_nrof_epochs', type=int, help='epoch num', default=2)
+    parser.add_argument('--init_learning_rate', type=float, help='init learning rate', default=0.00001)
+    parser.add_argument('--learning_rate_decay_factor', type=float, help='learning rate decay factor', default=0.000)
     parser.add_argument('--obj_weight', type=float, help='obj loss weight', default=5.0)
-    parser.add_argument('--noobj_weight', type=float, help='noobj loss weight', default=0.5)
-    parser.add_argument('--wh_weight', type=float, help='wh loss weight', default=0.5)
+    parser.add_argument('--noobj_weight', type=float, help='noobj loss weight', default=0.4)
+    parser.add_argument('--wh_weight', type=float, help='wh loss weight', default=0.4)
     parser.add_argument('--obj_thresh', type=float, help='obj mask thresh', default=0.7)
     parser.add_argument('--iou_thresh', type=float, help='iou mask thresh', default=0.3)
     parser.add_argument('--vaildation_split', type=float, help='vaildation split factor', default=0.1)
