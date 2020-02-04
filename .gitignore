@@ -14,3 +14,7 @@ test
 *~
 /voc/
 /.idea/
+*.cfg
+*.cfg.weights
+*.h5
+*.weights
